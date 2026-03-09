@@ -74,6 +74,11 @@ if [[ "${SOURCE_DIR}" == "${HOME}" ]]; then
     esac
 fi
 
+if [ -z "$(ls -A "${SOURCE_DIR}" 2>/dev/null)" ]; then
+    echo -e "${RED}Error: Source directory is empty: ${SOURCE_DIR}${NC}"
+    exit 1
+fi
+
 echo -e "${BLUE}=== Dotfiles Encryption Script ===${NC}\n"
 echo -e "${YELLOW}Source directory: ${SOURCE_DIR}${NC}"
 echo -e "${YELLOW}Manifest file: ${MANIFEST_FILE}${NC}\n"
