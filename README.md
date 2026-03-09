@@ -2,6 +2,20 @@
 
 最小の手順は用途ごとに分けます。
 
+まず age をインストールします:
+
+macOS:
+
+```bash
+brew install age
+```
+
+Linux:
+
+```bash
+sudo apt install age
+```
+
 最初に `AGE_SECRET_KEY` を設定します:
 
 ```bash
