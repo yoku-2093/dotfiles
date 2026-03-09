@@ -2,6 +2,12 @@
 
 最小の手順は用途ごとに分けます。
 
+最初に `AGE_SECRET_KEY` を設定します:
+
+```bash
+export AGE_SECRET_KEY=<あなたのキー>
+```
+
 暗号化（source/ から encrypted/ を更新）:
 
 ```bash
