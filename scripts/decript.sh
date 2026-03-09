@@ -11,6 +11,7 @@ DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENCRYPTED_DIR="${DOTFILES_DIR}/encrypted"
 MANIFEST_FILE="${DOTFILES_DIR}/dotfiles.manifest"
 OUTPUT_DIR="${DOTFILES_DIR}/target"
+KEY_FILE="${DOTFILES_DIR}/.age-key.txt"
 
 usage() {
     echo "Usage: $(basename "$0") [--output DIR] [--manifest FILE]"
@@ -62,8 +63,7 @@ fi
 
 echo -e "${BLUE}=== Dotfiles Installation Script ===${NC}\n"
 echo -e "${YELLOW}Output directory: ${OUTPUT_DIR}${NC}"
-echo -e "${YELLOW}Manifest file: ${MANIFEST_FILE}${NC}"
-echo -e "${YELLOW}Backup directory: disabled${NC}\n"
+echo -e "${YELLOW}Manifest file: ${MANIFEST_FILE}${NC}\n"
 
 AGE_BIN=""
 if [ -f "${HOME}/.local/share/mise/installs/age/latest/age/age" ]; then
@@ -76,8 +76,12 @@ else
 fi
 
 if [ -z "${AGE_SECRET_KEY:-}" ]; then
-    echo -e "${RED}Error: AGE_SECRET_KEY environment variable is not set${NC}"
-    exit 1
+    if [ -f "${KEY_FILE}" ]; then
+        echo -e "${YELLOW}Using secret key from ${KEY_FILE}${NC}\n"
+    else
+        echo -e "${RED}Error: AGE_SECRET_KEY environment variable is not set and ${KEY_FILE} not found${NC}"
+        exit 1
+    fi
 fi
 
 manifest_key() {
@@ -105,7 +109,11 @@ decrypt_file() {
 
     mkdir -p "$(dirname "${target}")"
 
-    echo "${AGE_SECRET_KEY}" | "${AGE_BIN}" --decrypt --identity - "${encrypted}" > "${target}"
+    if [ -n "${AGE_SECRET_KEY:-}" ]; then
+        echo "${AGE_SECRET_KEY}" | "${AGE_BIN}" --decrypt --identity - "${encrypted}" > "${target}"
+    else
+        "${AGE_BIN}" --decrypt --identity "${KEY_FILE}" "${encrypted}" > "${target}"
+    fi
     chmod "${permissions}" "${target}"
     echo -e "${GREEN}✓ Decrypted ${target}${NC}"
 }
@@ -120,7 +128,11 @@ decrypt_dir() {
     fi
 
     mkdir -p "${OUTPUT_DIR}"
-    echo "${AGE_SECRET_KEY}" | "${AGE_BIN}" --decrypt --identity - "${encrypted}" | tar -xf - -C "${OUTPUT_DIR}"
+    if [ -n "${AGE_SECRET_KEY:-}" ]; then
+        echo "${AGE_SECRET_KEY}" | "${AGE_BIN}" --decrypt --identity - "${encrypted}" | tar -xf - -C "${OUTPUT_DIR}"
+    else
+        "${AGE_BIN}" --decrypt --identity "${KEY_FILE}" "${encrypted}" | tar -xf - -C "${OUTPUT_DIR}"
+    fi
 
     if [ -d "${target_dir}" ]; then
         chmod 700 "${target_dir}" || true

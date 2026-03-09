@@ -97,7 +97,21 @@ else
     exit 1
 fi
 
-if [ ! -f "${KEY_FILE}" ]; then
+if [ -n "${AGE_SECRET_KEY:-}" ]; then
+    echo -e "${YELLOW}Using AGE_SECRET_KEY from environment...${NC}"
+    PUBLIC_KEY_FROM_ENV=$(printf '%s\n' "${AGE_SECRET_KEY}" | "${AGE_KEYGEN_BIN}" -y 2>/dev/null)
+    if [ -n "${PUBLIC_KEY_FROM_ENV}" ]; then
+        {
+            echo "# created: $(date -Iseconds)"
+            echo "# public key: ${PUBLIC_KEY_FROM_ENV}"
+            echo "${AGE_SECRET_KEY}"
+        } > "${KEY_FILE}"
+        echo -e "${GREEN}✓ Key file created from environment variable${NC}\n"
+    else
+        echo -e "${RED}Error: Invalid AGE_SECRET_KEY${NC}"
+        exit 1
+    fi
+elif [ ! -f "${KEY_FILE}" ]; then
     echo -e "${YELLOW}Generating new age key pair...${NC}"
     "${AGE_KEYGEN_BIN}" -o "${KEY_FILE}"
     echo -e "${GREEN}✓ Age key pair generated${NC}\n"
