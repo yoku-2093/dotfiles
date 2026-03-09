@@ -1,19 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENCRYPTED_DIR="${DOTFILES_DIR}/encrypted"
 KEY_FILE="${DOTFILES_DIR}/.age-key.txt"
+MANIFEST_FILE="${DOTFILES_DIR}/dotfiles.manifest"
+SOURCE_DIR="${DOTFILES_DIR}/source"
 
-# Source directory (default: HOME, or specify via --source)
-SOURCE_DIR="${HOME}"
+usage() {
+    echo "Usage: $(basename "$0") [--source DIR] [--manifest FILE]"
+    echo "  --source, -s    Source directory to encrypt (default: ${DOTFILES_DIR}/source)"
+    echo "  --manifest, -m  Manifest file path (default: ${DOTFILES_DIR}/dotfiles.manifest)"
+}
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -25,27 +29,38 @@ while [[ $# -gt 0 ]]; do
             fi
             SOURCE_DIR="$1"
             ;;
+        -m|--manifest)
+            shift
+            if [[ $# -eq 0 ]]; then
+                echo -e "${RED}Error: --manifest requires a file path${NC}"
+                exit 1
+            fi
+            MANIFEST_FILE="$1"
+            ;;
         -h|--help)
-            echo "Usage: $(basename "$0") [--source DIR]"
-            echo "  --source, -s  Source directory to encrypt (default: HOME)"
+            usage
             exit 0
             ;;
         *)
             echo -e "${RED}Error: Unknown argument '$1'${NC}"
-            echo "Usage: $(basename "$0") [--source DIR]"
+            usage
             exit 1
             ;;
     esac
     shift
 done
 
-# Resolve to absolute path
+mkdir -p "${SOURCE_DIR}"
 SOURCE_DIR="$(cd "${SOURCE_DIR}" 2>/dev/null && pwd)" || {
     echo -e "${RED}Error: Source directory '${SOURCE_DIR}' does not exist${NC}"
     exit 1
 }
 
-# Confirm when encrypting from HOME
+if [ ! -f "${MANIFEST_FILE}" ]; then
+    echo -e "${RED}Error: Manifest file not found: ${MANIFEST_FILE}${NC}"
+    exit 1
+fi
+
 if [[ "${SOURCE_DIR}" == "${HOME}" ]]; then
     echo -e "${YELLOW}Source directory is HOME: ${SOURCE_DIR}${NC}"
     read -r -p "Proceed with encrypting from HOME? [y/N] " confirm
@@ -60,9 +75,9 @@ if [[ "${SOURCE_DIR}" == "${HOME}" ]]; then
 fi
 
 echo -e "${BLUE}=== Dotfiles Encryption Script ===${NC}\n"
-echo -e "${YELLOW}Source directory: ${SOURCE_DIR}${NC}\n"
+echo -e "${YELLOW}Source directory: ${SOURCE_DIR}${NC}"
+echo -e "${YELLOW}Manifest file: ${MANIFEST_FILE}${NC}\n"
 
-# Find age binaries (check mise installation first, then system)
 AGE_BIN=""
 AGE_KEYGEN_BIN=""
 
@@ -74,14 +89,9 @@ elif command -v age &> /dev/null; then
     AGE_KEYGEN_BIN="age-keygen"
 else
     echo -e "${RED}Error: age is not installed${NC}"
-    echo "Please install age first:"
-    echo "  - Using mise: mise install age"
-    echo "  - Using apt: sudo apt install age"
-    echo "  - From source: https://github.com/FiloSottile/age"
     exit 1
 fi
 
-# Generate age key if it doesn't exist
 if [ ! -f "${KEY_FILE}" ]; then
     echo -e "${YELLOW}Generating new age key pair...${NC}"
     "${AGE_KEYGEN_BIN}" -o "${KEY_FILE}"
@@ -90,19 +100,27 @@ else
     echo -e "${YELLOW}Using existing age key: ${KEY_FILE}${NC}\n"
 fi
 
-# Extract public key
 PUBLIC_KEY=$(grep "^# public key:" "${KEY_FILE}" | cut -d: -f2 | tr -d ' ')
 if [ -z "${PUBLIC_KEY}" ]; then
     echo -e "${RED}Error: Could not extract public key from ${KEY_FILE}${NC}"
     exit 1
 fi
 
-echo -e "${BLUE}Public key: ${GREEN}${PUBLIC_KEY}${NC}\n"
-
-# Create encrypted directory if it doesn't exist
 mkdir -p "${ENCRYPTED_DIR}"
 
-# Function to encrypt a file
+manifest_key() {
+    local rel="$1"
+    rel="${rel%/}"
+    rel="${rel#./}"
+    rel="${rel#/}"
+    rel="${rel#\.}"
+    rel="${rel//\//__}"
+    if [ -z "${rel}" ]; then
+        rel="root"
+    fi
+    echo "${rel}"
+}
+
 encrypt_file() {
     local source="$1"
     local dest="$2"
@@ -118,71 +136,42 @@ encrypt_file() {
     echo -e "${GREEN}✓ Encrypted to ${dest}${NC}"
 }
 
-# Encrypt .bashrc
-encrypt_file "${SOURCE_DIR}/.bashrc" "${ENCRYPTED_DIR}/bashrc.age" ".bashrc"
+while IFS= read -r raw_line || [ -n "${raw_line}" ]; do
+    line="${raw_line%%#*}"
+    line="$(echo "${line}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+    [ -z "${line}" ] && continue
 
-# Encrypt .gitconfig
-encrypt_file "${SOURCE_DIR}/.gitconfig" "${ENCRYPTED_DIR}/gitconfig.age" ".gitconfig"
+    rel="${line%/}"
+    rel="${rel#./}"
+    rel="${rel#/}"
+    [ -z "${rel}" ] && continue
 
-# Encrypt .ssh directory (as tar archive)
-if [ -d "${SOURCE_DIR}/.ssh" ]; then
-    echo -e "Creating tar archive of .ssh directory..."
-    SSH_TAR="/tmp/ssh-$$.tar"
-    tar -cf "${SSH_TAR}" -C "${SOURCE_DIR}" .ssh
-    echo -e "${GREEN}✓ Created tar archive${NC}"
+    source_path="${SOURCE_DIR}/${rel}"
+    key="$(manifest_key "${rel}")"
 
-    echo -e "Encrypting .ssh archive..."
-    "${AGE_BIN}" --encrypt --armor --recipient "${PUBLIC_KEY}" --output "${ENCRYPTED_DIR}/ssh.tar.age" "${SSH_TAR}"
-    rm -f "${SSH_TAR}"
-    echo -e "${GREEN}✓ Encrypted to ${ENCRYPTED_DIR}/ssh.tar.age${NC}"
-else
-    echo -e "${YELLOW}Warning: ${SOURCE_DIR}/.ssh directory does not exist, skipping${NC}"
-fi
+    if [[ "${line}" == */ ]] || [ -d "${source_path}" ]; then
+        if [ ! -d "${source_path}" ]; then
+            echo -e "${YELLOW}Warning: ${source_path} does not exist, skipping${NC}"
+            continue
+        fi
 
-echo -e "\n${GREEN}=== Encryption Complete ===${NC}\n"
+        tar_file="/tmp/${key}-$$.tar"
+        echo -e "Creating tar archive of ${rel}/ ..."
+        tar -cf "${tar_file}" -C "${SOURCE_DIR}" "${rel}"
+        "${AGE_BIN}" --encrypt --armor --recipient "${PUBLIC_KEY}" --output "${ENCRYPTED_DIR}/${key}.tar.age" "${tar_file}"
+        rm -f "${tar_file}"
+        echo -e "${GREEN}✓ Encrypted to ${ENCRYPTED_DIR}/${key}.tar.age${NC}"
+    else
+        encrypt_file "${source_path}" "${ENCRYPTED_DIR}/${key}.age" "${rel}"
+    fi
+done < "${MANIFEST_FILE}"
 
-# Display instructions for Gitpod Secrets
-echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║  Next Steps: Configure Gitpod/ONA Secrets                      ║${NC}"
-echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}\n"
-
-echo -e "${YELLOW}1. Copy the secret key below:${NC}\n"
-SECRET_KEY=$(grep -v "^#" "${KEY_FILE}")
-echo -e "${GREEN}${SECRET_KEY}${NC}\n"
-
-echo -e "${YELLOW}2. Add to Gitpod/ONA Secrets:${NC}"
-echo -e "   - Go to: ${BLUE}https://gitpod.io/user/variables${NC} (or your ONA settings)"
-echo -e "   - Click 'New Variable'"
-echo -e "   - Name: ${GREEN}AGE_SECRET_KEY${NC}"
-echo -e "   - Value: ${GREEN}<paste the secret key above>${NC}"
-echo -e "   - Scope: Set to your repositories (e.g., */dotfiles)"
-echo ""
-
-echo -e "${YELLOW}3. Configure Gitpod Dotfiles:${NC}"
-echo -e "   - Go to: ${BLUE}https://gitpod.io/user/preferences${NC}"
-echo -e "   - Set 'Dotfiles Repository' to your dotfiles repo URL"
-echo ""
-
-echo -e "${YELLOW}4. Commit and push encrypted files:${NC}"
-echo -e "   ${GREEN}cd ${DOTFILES_DIR}${NC}"
-echo -e "   ${GREEN}git add encrypted/${NC}"
-echo -e "   ${GREEN}git commit -m 'Add encrypted dotfiles'${NC}"
-echo -e "   ${GREEN}git push${NC}"
-echo ""
-
-echo -e "${RED}⚠️  IMPORTANT: Keep the key file (${KEY_FILE}) secure!${NC}"
-echo -e "${RED}   Do NOT commit this file to git.${NC}"
-echo -e "${RED}   Add it to .gitignore immediately.${NC}\n"
-
-# Add .age-key.txt to .gitignore if not already there
 if [ -f "${DOTFILES_DIR}/.gitignore" ]; then
     if ! grep -q "^\.age-key\.txt$" "${DOTFILES_DIR}/.gitignore"; then
         echo ".age-key.txt" >> "${DOTFILES_DIR}/.gitignore"
-        echo -e "${GREEN}✓ Added .age-key.txt to .gitignore${NC}"
     fi
 else
     echo ".age-key.txt" > "${DOTFILES_DIR}/.gitignore"
-    echo -e "${GREEN}✓ Created .gitignore with .age-key.txt${NC}"
 fi
 
 echo -e "\n${GREEN}Done!${NC}\n"
