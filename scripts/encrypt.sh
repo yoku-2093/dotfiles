@@ -12,7 +12,55 @@ DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENCRYPTED_DIR="${DOTFILES_DIR}/encrypted"
 KEY_FILE="${DOTFILES_DIR}/.age-key.txt"
 
+# Source directory (default: HOME, or specify via --source)
+SOURCE_DIR="${HOME}"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -s|--source)
+            shift
+            if [[ $# -eq 0 ]]; then
+                echo -e "${RED}Error: --source requires a directory path${NC}"
+                exit 1
+            fi
+            SOURCE_DIR="$1"
+            ;;
+        -h|--help)
+            echo "Usage: $(basename "$0") [--source DIR]"
+            echo "  --source, -s  Source directory to encrypt (default: HOME)"
+            exit 0
+            ;;
+        *)
+            echo -e "${RED}Error: Unknown argument '$1'${NC}"
+            echo "Usage: $(basename "$0") [--source DIR]"
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+# Resolve to absolute path
+SOURCE_DIR="$(cd "${SOURCE_DIR}" 2>/dev/null && pwd)" || {
+    echo -e "${RED}Error: Source directory '${SOURCE_DIR}' does not exist${NC}"
+    exit 1
+}
+
+# Confirm when encrypting from HOME
+if [[ "${SOURCE_DIR}" == "${HOME}" ]]; then
+    echo -e "${YELLOW}Source directory is HOME: ${SOURCE_DIR}${NC}"
+    read -r -p "Proceed with encrypting from HOME? [y/N] " confirm
+    case "${confirm}" in
+        y|Y|yes|YES)
+            ;;
+        *)
+            echo -e "${YELLOW}Aborted.${NC}"
+            exit 0
+            ;;
+    esac
+fi
+
 echo -e "${BLUE}=== Dotfiles Encryption Script ===${NC}\n"
+echo -e "${YELLOW}Source directory: ${SOURCE_DIR}${NC}\n"
 
 # Find age binaries (check mise installation first, then system)
 AGE_BIN=""
@@ -71,16 +119,16 @@ encrypt_file() {
 }
 
 # Encrypt .bashrc
-encrypt_file "${HOME}/.bashrc" "${ENCRYPTED_DIR}/bashrc.age" ".bashrc"
+encrypt_file "${SOURCE_DIR}/.bashrc" "${ENCRYPTED_DIR}/bashrc.age" ".bashrc"
 
 # Encrypt .gitconfig
-encrypt_file "${HOME}/.gitconfig" "${ENCRYPTED_DIR}/gitconfig.age" ".gitconfig"
+encrypt_file "${SOURCE_DIR}/.gitconfig" "${ENCRYPTED_DIR}/gitconfig.age" ".gitconfig"
 
 # Encrypt .ssh directory (as tar archive)
-if [ -d "${HOME}/.ssh" ]; then
+if [ -d "${SOURCE_DIR}/.ssh" ]; then
     echo -e "Creating tar archive of .ssh directory..."
     SSH_TAR="/tmp/ssh-$$.tar"
-    tar -cf "${SSH_TAR}" -C "${HOME}" .ssh
+    tar -cf "${SSH_TAR}" -C "${SOURCE_DIR}" .ssh
     echo -e "${GREEN}✓ Created tar archive${NC}"
 
     echo -e "Encrypting .ssh archive..."
@@ -88,7 +136,7 @@ if [ -d "${HOME}/.ssh" ]; then
     rm -f "${SSH_TAR}"
     echo -e "${GREEN}✓ Encrypted to ${ENCRYPTED_DIR}/ssh.tar.age${NC}"
 else
-    echo -e "${YELLOW}Warning: ${HOME}/.ssh directory does not exist, skipping${NC}"
+    echo -e "${YELLOW}Warning: ${SOURCE_DIR}/.ssh directory does not exist, skipping${NC}"
 fi
 
 echo -e "\n${GREEN}=== Encryption Complete ===${NC}\n"

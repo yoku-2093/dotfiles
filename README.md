@@ -76,6 +76,19 @@ Run the encryption script to encrypt your current dotfiles:
 ./scripts/encrypt.sh
 ```
 
+**Usage:**
+```bash
+./scripts/encrypt.sh [--source DIR]
+
+# デフォルト: ホームディレクトリから暗号化
+# ※ HOME を対象にする場合は確認プロンプトが出ます
+./scripts/encrypt.sh
+
+# 特定のディレクトリを指定
+./scripts/encrypt.sh --source /path/to/dotfiles
+./scripts/encrypt.sh -s ~/my-configs
+```
+
 This script will:
 - Generate an age key pair (if not exists)
 - Encrypt `.bashrc`, `.gitconfig`, and `.ssh/*`
@@ -186,7 +199,9 @@ vim ~/.gitconfig
 Run the encryption script again:
 ```bash
 cd ~/dotfiles
-./scripts/encrypt.sh
+./scripts/encrypt.sh              # デフォルト: ホームディレクトリ (~/)
+# または特定のディレクトリを指定:
+./scripts/encrypt.sh --source /path/to/source
 ```
 
 This will update the encrypted files in `encrypted/` directory.
@@ -309,7 +324,7 @@ age --encrypt --recipient <key1> --recipient <key2> -o output.age input
 To encrypt additional files, edit `scripts/encrypt.sh` and add:
 
 ```bash
-encrypt_file "${HOME}/.myconfig" "${ENCRYPTED_DIR}/myconfig.age" ".myconfig"
+encrypt_file "${SOURCE_DIR}/.myconfig" "${ENCRYPTED_DIR}/myconfig.age" ".myconfig"
 ```
 
 Then update `install.sh` to decrypt it:
