@@ -11,7 +11,6 @@ DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENCRYPTED_DIR="${DOTFILES_DIR}/encrypted"
 MANIFEST_FILE="${DOTFILES_DIR}/dotfiles.manifest"
 OUTPUT_DIR="${DOTFILES_DIR}/target"
-BACKUP_DIR_BASE="${HOME}/.dotfiles-backup-$(date +%Y%m%d-%H%M%S)"
 
 usage() {
     echo "Usage: $(basename "$0") [--output DIR] [--manifest FILE]"
@@ -61,13 +60,10 @@ if [ ! -f "${MANIFEST_FILE}" ]; then
     exit 1
 fi
 
-BACKUP_DIR="${BACKUP_DIR_BASE}"
-mkdir -p "${BACKUP_DIR}"
-
 echo -e "${BLUE}=== Dotfiles Installation Script ===${NC}\n"
 echo -e "${YELLOW}Output directory: ${OUTPUT_DIR}${NC}"
 echo -e "${YELLOW}Manifest file: ${MANIFEST_FILE}${NC}"
-echo -e "${YELLOW}Backup directory: ${BACKUP_DIR}${NC}\n"
+echo -e "${YELLOW}Backup directory: disabled${NC}\n"
 
 AGE_BIN=""
 if [ -f "${HOME}/.local/share/mise/installs/age/latest/age/age" ]; then
@@ -97,18 +93,6 @@ manifest_key() {
     echo "${rel}"
 }
 
-backup_path() {
-    local target="$1"
-    local rel_to_output="${target#"${OUTPUT_DIR}/"}"
-    local backup_target="${BACKUP_DIR}/${rel_to_output}"
-    mkdir -p "$(dirname "${backup_target}")"
-    if [ -d "${target}" ]; then
-        cp -rp "${target}" "${backup_target}"
-    else
-        cp -p "${target}" "${backup_target}"
-    fi
-}
-
 decrypt_file() {
     local encrypted="$1"
     local target="$2"
@@ -120,10 +104,6 @@ decrypt_file() {
     fi
 
     mkdir -p "$(dirname "${target}")"
-
-    if [ -e "${target}" ]; then
-        backup_path "${target}"
-    fi
 
     echo "${AGE_SECRET_KEY}" | "${AGE_BIN}" --decrypt --identity - "${encrypted}" > "${target}"
     chmod "${permissions}" "${target}"
@@ -137,10 +117,6 @@ decrypt_dir() {
     if [ ! -f "${encrypted}" ]; then
         echo -e "${YELLOW}Warning: ${encrypted} does not exist, skipping${NC}"
         return
-    fi
-
-    if [ -d "${target_dir}" ]; then
-        backup_path "${target_dir}"
     fi
 
     mkdir -p "${OUTPUT_DIR}"
