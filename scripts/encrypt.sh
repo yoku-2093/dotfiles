@@ -176,7 +176,7 @@ while IFS= read -r raw_line || [ -n "${raw_line}" ]; do
 
         tar_file="/tmp/${key}-$$.tar"
         echo -e "Creating tar archive of ${rel}/ ..."
-        tar -cf "${tar_file}" -C "${SOURCE_DIR}" "${rel}"
+        COPYFILE_DISABLE=1 tar -cf "${tar_file}" -C "${SOURCE_DIR}" --exclude='._*' "${rel}"
         "${AGE_BIN}" --encrypt --armor --recipient "${PUBLIC_KEY}" --output "${ENCRYPTED_DIR}/${key}.tar.age" "${tar_file}"
         rm -f "${tar_file}"
         echo -e "${GREEN}✓ Encrypted to ${ENCRYPTED_DIR}/${key}.tar.age${NC}"

@@ -129,9 +129,9 @@ decrypt_dir() {
 
     mkdir -p "${OUTPUT_DIR}"
     if [ -n "${AGE_SECRET_KEY:-}" ]; then
-        echo "${AGE_SECRET_KEY}" | "${AGE_BIN}" --decrypt --identity - "${encrypted}" | tar -xf - -C "${OUTPUT_DIR}"
+        echo "${AGE_SECRET_KEY}" | "${AGE_BIN}" --decrypt --identity - "${encrypted}" | tar -xf - -C "${OUTPUT_DIR}" --warning=no-unknown-keyword
     else
-        "${AGE_BIN}" --decrypt --identity "${KEY_FILE}" "${encrypted}" | tar -xf - -C "${OUTPUT_DIR}"
+        "${AGE_BIN}" --decrypt --identity "${KEY_FILE}" "${encrypted}" | tar -xf - -C "${OUTPUT_DIR}" --warning=no-unknown-keyword
     fi
 
     if [ -d "${target_dir}" ]; then
