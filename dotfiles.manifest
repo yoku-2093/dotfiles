@@ -1,6 +1,0 @@
-# Encrypt / decrypt targets (relative to source or output root)
-.bashrc
-.ssh/
-.aws/
-.gitconfig
-.zshrc

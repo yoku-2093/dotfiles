@@ -9,14 +9,12 @@ NC='\033[0m'
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENCRYPTED_DIR="${DOTFILES_DIR}/encrypted"
-MANIFEST_FILE="${DOTFILES_DIR}/dotfiles.manifest"
 OUTPUT_DIR="${DOTFILES_DIR}/target"
 KEY_FILE="${DOTFILES_DIR}/.age-key.txt"
 
 usage() {
-    echo "Usage: $(basename "$0") [--output DIR] [--manifest FILE]"
+    echo "Usage: $(basename "$0") [--output DIR]"
     echo "  --output, -o    Output root directory for decrypted files (default: ${DOTFILES_DIR}/target)"
-    echo "  --manifest, -m  Manifest file path (default: ${DOTFILES_DIR}/dotfiles.manifest)"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -28,14 +26,6 @@ while [[ $# -gt 0 ]]; do
                 exit 1
             fi
             OUTPUT_DIR="$1"
-            ;;
-        -m|--manifest)
-            shift
-            if [[ $# -eq 0 ]]; then
-                echo -e "${RED}Error: --manifest requires a file path${NC}"
-                exit 1
-            fi
-            MANIFEST_FILE="$1"
             ;;
         -h|--help)
             usage
@@ -56,14 +46,8 @@ OUTPUT_DIR="$(cd "${OUTPUT_DIR}" 2>/dev/null && pwd)" || {
     exit 1
 }
 
-if [ ! -f "${MANIFEST_FILE}" ]; then
-    echo -e "${RED}Error: Manifest file not found: ${MANIFEST_FILE}${NC}"
-    exit 1
-fi
-
 echo -e "${BLUE}=== Dotfiles Installation Script ===${NC}\n"
-echo -e "${YELLOW}Output directory: ${OUTPUT_DIR}${NC}"
-echo -e "${YELLOW}Manifest file: ${MANIFEST_FILE}${NC}\n"
+echo -e "${YELLOW}Output directory: ${OUTPUT_DIR}${NC}\n"
 
 AGE_BIN=""
 if [ -f "${HOME}/.local/share/mise/installs/age/latest/age/age" ]; then
@@ -95,6 +79,19 @@ manifest_key() {
         rel="root"
     fi
     echo "${rel}"
+}
+
+key_to_path() {
+    local key="$1"
+    local path="${key//__//}"
+    if [ "${path}" = "root" ]; then
+        path=""
+    fi
+    if [ ! "${path}" = "${path#.}" ]; then
+        echo "${path}"
+    else
+        echo ".${path}"
+    fi
 }
 
 decrypt_file() {
@@ -141,24 +138,24 @@ decrypt_dir() {
     echo -e "${GREEN}✓ Decrypted ${target_dir}/ (tar extract)${NC}"
 }
 
-while IFS= read -r raw_line || [ -n "${raw_line}" ]; do
-    line="${raw_line%%#*}"
-    line="$(echo "${line}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
-    [ -z "${line}" ] && continue
+cd "${ENCRYPTED_DIR}"
+shopt -s nullglob
 
-    rel="${line%/}"
-    rel="${rel#./}"
-    rel="${rel#/}"
-    [ -z "${rel}" ] && continue
+for encrypted_file in *.age; do
+    [ -e "${encrypted_file}" ] || continue
 
-    key="$(manifest_key "${rel}")"
-    target="${OUTPUT_DIR}/${rel}"
+    key="${encrypted_file%.age}"
 
-    if [[ "${line}" == */ ]]; then
-        decrypt_dir "${ENCRYPTED_DIR}/${key}.tar.age" "${target}"
+    if [[ "${key}" == *.tar ]]; then
+        key="${key%.tar}"
+        rel="$(key_to_path "${key}")"
+        target="${OUTPUT_DIR}/${rel}"
+        decrypt_dir "${ENCRYPTED_DIR}/${encrypted_file}" "${target}"
     else
-        decrypt_file "${ENCRYPTED_DIR}/${key}.age" "${target}" "644"
+        rel="$(key_to_path "${key}")"
+        target="${OUTPUT_DIR}/${rel}"
+        decrypt_file "${ENCRYPTED_DIR}/${encrypted_file}" "${target}" "644"
     fi
-done < "${MANIFEST_FILE}"
+done
 
 echo -e "\n${GREEN}Done!${NC}\n"

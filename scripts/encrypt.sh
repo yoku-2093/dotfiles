@@ -10,13 +10,11 @@ NC='\033[0m'
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENCRYPTED_DIR="${DOTFILES_DIR}/encrypted"
 KEY_FILE="${DOTFILES_DIR}/.age-key.txt"
-MANIFEST_FILE="${DOTFILES_DIR}/dotfiles.manifest"
 SOURCE_DIR="${DOTFILES_DIR}/source"
 
 usage() {
-    echo "Usage: $(basename "$0") [--source DIR] [--manifest FILE]"
+    echo "Usage: $(basename "$0") [--source DIR]"
     echo "  --source, -s    Source directory to encrypt (default: ${DOTFILES_DIR}/source)"
-    echo "  --manifest, -m  Manifest file path (default: ${DOTFILES_DIR}/dotfiles.manifest)"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -28,14 +26,6 @@ while [[ $# -gt 0 ]]; do
                 exit 1
             fi
             SOURCE_DIR="$1"
-            ;;
-        -m|--manifest)
-            shift
-            if [[ $# -eq 0 ]]; then
-                echo -e "${RED}Error: --manifest requires a file path${NC}"
-                exit 1
-            fi
-            MANIFEST_FILE="$1"
             ;;
         -h|--help)
             usage
@@ -56,11 +46,6 @@ SOURCE_DIR="$(cd "${SOURCE_DIR}" 2>/dev/null && pwd)" || {
     exit 1
 }
 
-if [ ! -f "${MANIFEST_FILE}" ]; then
-    echo -e "${RED}Error: Manifest file not found: ${MANIFEST_FILE}${NC}"
-    exit 1
-fi
-
 if [[ "${SOURCE_DIR}" == "${HOME}" ]]; then
     echo -e "${YELLOW}Source directory is HOME: ${SOURCE_DIR}${NC}"
     read -r -p "Proceed with encrypting from HOME? [y/N] " confirm
@@ -80,8 +65,7 @@ if [ -z "$(ls -A "${SOURCE_DIR}" 2>/dev/null)" ]; then
 fi
 
 echo -e "${BLUE}=== Dotfiles Encryption Script ===${NC}\n"
-echo -e "${YELLOW}Source directory: ${SOURCE_DIR}${NC}"
-echo -e "${YELLOW}Manifest file: ${MANIFEST_FILE}${NC}\n"
+echo -e "${YELLOW}Source directory: ${SOURCE_DIR}${NC}\n"
 
 AGE_BIN=""
 AGE_KEYGEN_BIN=""
@@ -155,25 +139,17 @@ encrypt_file() {
     echo -e "${GREEN}✓ Encrypted to ${dest}${NC}"
 }
 
-while IFS= read -r raw_line || [ -n "${raw_line}" ]; do
-    line="${raw_line%%#*}"
-    line="$(echo "${line}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
-    [ -z "${line}" ] && continue
+cd "${SOURCE_DIR}"
+shopt -s dotglob nullglob
 
-    rel="${line%/}"
-    rel="${rel#./}"
-    rel="${rel#/}"
-    [ -z "${rel}" ] && continue
+for item in *; do
+    [ -e "${item}" ] || continue
 
-    source_path="${SOURCE_DIR}/${rel}"
+    rel="${item}"
     key="$(manifest_key "${rel}")"
+    source_path="${SOURCE_DIR}/${rel}"
 
-    if [[ "${line}" == */ ]] || [ -d "${source_path}" ]; then
-        if [ ! -d "${source_path}" ]; then
-            echo -e "${YELLOW}Warning: ${source_path} does not exist, skipping${NC}"
-            continue
-        fi
-
+    if [ -d "${source_path}" ]; then
         tar_file="/tmp/${key}-$$.tar"
         echo -e "Creating tar archive of ${rel}/ ..."
         COPYFILE_DISABLE=1 tar -cf "${tar_file}" -C "${SOURCE_DIR}" --exclude='._*' "${rel}"
@@ -183,7 +159,7 @@ while IFS= read -r raw_line || [ -n "${raw_line}" ]; do
     else
         encrypt_file "${source_path}" "${ENCRYPTED_DIR}/${key}.age" "${rel}"
     fi
-done < "${MANIFEST_FILE}"
+done
 
 if [ -f "${DOTFILES_DIR}/.gitignore" ]; then
     if ! grep -q "^\.age-key\.txt$" "${DOTFILES_DIR}/.gitignore"; then
