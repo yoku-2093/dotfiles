@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 環境ごとの dotfiles インストーラ。
 #
-#   ./install.sh [--env <name>]
+#   ./install.sh --env <name>
 #
 # 適用されるのは common と、指定した環境のディレクトリだけ。後のものが前のものを
 # 上書きする。
@@ -14,7 +14,7 @@
 #
 # 各環境のディレクトリは中身が両方とも任意。無いものは飛ばす。
 #
-#   <env>/home/     ここに $HOME からの相対パスで置いたものが配置される
+#   <env>/home/     ここに $HOME からの相対パスで置いたものが symlink される
 #   <env>/setup.sh  install 時に実行される
 #
 # setup.sh には DOTFILES_DIR / DOTFILES_TARGET / DOTFILES_ENV が渡る。
@@ -41,7 +41,7 @@ usage: install.sh [--env <name>] [options]
   --env <name>        環境を指定する (省略すると common だけを置く)
   --target <dir>      配置先を変える (default: $HOME)
   --backup-dir <dir>  退避先を変える (default: <target>/.dotfiles-backup)
-  --skip-setup        setup.sh を実行せず配置だけする
+  --skip-setup        setup.sh を実行せず symlink だけ張る
   --dry-run           何もせず、やることだけ表示する
   --list              適用される内容を表示して終了する
   -h, --help          このヘルプ
@@ -133,11 +133,9 @@ else
 fi
 BACKUP_DIR="${backup_root:-${target_dir}/.dotfiles-backup}/$(date +%Y%m%d-%H%M%S)"
 
-# --- 配置 ---------------------------------------------------------------------
-#
-# コピーではなく ln -s でリポジトリの中を指す。編集はリポジトリ側でする。
+# --- symlink ------------------------------------------------------------------
 
-place_one() {
+link_one() {
     local home_dir="$1" rel="$2"
     local src="${home_dir}/${rel}"
     local dest="${target_dir}/${rel}"
@@ -151,13 +149,13 @@ place_one() {
             return 0
         fi
 
-        # 前のレイヤー（や前回の実行）が置いたものは退避せず差し替える
+        # 前のレイヤー（や前回の実行）が張ったリンクは退避せず差し替える
         case "${current}" in
             "${DOTFILES_DIR}"/*) [ -n "${dry_run}" ] || rm "${dest}" ;;
         esac
     fi
 
-    # 自分が置いたものでなければ（実ファイルでも壊れた参照でも）退避する
+    # 自分が張ったものでない実ファイル・symlink・リンク切れは退避する
     if [ -e "${dest}" ] || [ -L "${dest}" ]; then
         log "  backup ${rel} -> ${BACKUP_DIR}/${rel}"
         if [ -z "${dry_run}" ]; then
@@ -166,21 +164,21 @@ place_one() {
         fi
     fi
 
-    log "  place  ${rel}"
+    log "  link   ${rel}"
     if [ -z "${dry_run}" ]; then
         mkdir -p "$(dirname "${dest}")"
         ln -s "${src}" "${dest}"
     fi
 }
 
-# ディレクトリは丸ごと置かずファイル単位で置く。
+# ディレクトリ自体は symlink にせずファイル単位で張る。
 # そうしないと ~/.config のような共有ディレクトリを丸ごと奪ってしまう。
-place_layer() {
+link_layer() {
     local home_dir="$1" path
     [ -d "${home_dir}" ] || return 0
 
     find "${home_dir}" \( -type f -o -type l \) -print | while IFS= read -r path; do
-        place_one "${home_dir}" "${path#"${home_dir}"/}"
+        link_one "${home_dir}" "${path#"${home_dir}"/}"
     done
 }
 
@@ -212,14 +210,14 @@ for layer in ${layers}; do
     [ -d "${layer_dir}" ] || continue
 
     log "[${layer}]"
-    place_layer "${layer_dir}/home"
+    link_layer "${layer_dir}/home"
 
     if [ -f "${layer_dir}/setup.sh" ]; then
         if [ -n "${skip_setup}" ] || [ -n "${dry_run}" ]; then
             log "  skip   setup.sh"
         else
             log "  run    setup.sh"
-            # 1つの setup.sh の失敗で配置まで巻き戻したくないので続行する
+            # 1つの setup.sh の失敗で symlink まで巻き戻したくないので続行する
             bash "${layer_dir}/setup.sh" || log "  Warning: ${layer}/setup.sh が失敗した ($?)"
         fi
     fi

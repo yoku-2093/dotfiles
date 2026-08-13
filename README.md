@@ -7,7 +7,7 @@ git clone <this repo> ~/dotfiles
 ~/dotfiles/install.sh --env ona
 ```
 
-- 何度実行してもよい（既に正しく置かれていれば何もしない）
+- 何度実行してもよい（既に正しい symlink なら何もしない）
 - 既存のファイルは上書きせず `~/.dotfiles-backup/<日時>/` に退避する
 - macOS / Linux で動く。bash と coreutils だけで完結する
 
@@ -43,7 +43,7 @@ DOTFILES_ENV=macos-local ./install.sh   # 同じ（--env が優先）
 
 ```
 <env>/
-├── home/      $HOME からの相対パスで置いたファイルが配置される
+├── home/      $HOME からの相対パスで置いたファイルが symlink される
 └── setup.sh    install 時に実行される
 ```
 
@@ -67,15 +67,13 @@ raspberrypi/setup.sh
 
 ### home/
 
-| 置く場所 | 置かれる先 |
+| 置く場所 | できる symlink |
 | --- | --- |
 | `common/home/.gitconfig` | `~/.gitconfig` |
 | `raspberrypi/home/.config/nvim/init.lua` | `~/.config/nvim/init.lua` |
 
-途中のディレクトリは自動で作る。ディレクトリを丸ごと置かずファイル単位で置くので、
-`~/.config` の他の中身には触らない。
-
-置き方はコピーではなく `ln -s` なので、編集はリポジトリ側でする。
+途中のディレクトリは自動で作る。ディレクトリ自体は symlink にせずファイル単位で
+張るので、`~/.config` の他の中身には触らない。
 
 同じパスを `common` と環境の両方が持つ場合は、環境側が勝つ。
 
@@ -105,8 +103,8 @@ aqua up                    # バージョンを上げる
 
   `macos-local/home/.zshrc` には入れてある。ona とラズパイの rc は
   dotfiles 側で持っていないので、自分で1行足す
-- `DOTFILES_AQUA_LAZY=1` を付けると実体を落とさず PATH に載せるだけにする（初回が
-  速い。実体は最初にコマンドを叩いたときに落ちてくる）
+- `DOTFILES_AQUA_ONLY_LINK=1` を付けると実体を落とさず link だけ張る（初回が速い。
+  実体は最初にコマンドを叩いたときに落ちてくる）
 
 ### aqua に向かないもの
 
@@ -146,7 +144,7 @@ root でなければ `sudo` を付け、どちらも使えなければ警告し�
 --env <name>        環境を指定する (省略すると common だけを置く)
 --target <dir>      配置先を変える (default: $HOME)
 --backup-dir <dir>  退避先を変える (default: <target>/.dotfiles-backup)
---skip-setup        setup.sh を実行せず配置だけする
+--skip-setup        setup.sh を実行せず symlink だけ張る
 --dry-run           何もせず、やることだけ表示する
 --list              適用される内容を表示して終了する
 -h, --help          ヘルプ
