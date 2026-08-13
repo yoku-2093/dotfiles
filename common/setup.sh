@@ -83,10 +83,10 @@ fi
 
 if [ -x "${AQUA_BIN}" ] && [ -f "${AQUA_CONFIG}" ]; then
     # -a: グローバル設定 (aqua.yaml) のパッケージも入れる
-    # DOTFILES_AQUA_ONLY_LINK=1 なら実体を落とさず link だけ張る（初回実行が速い。
-    # 実体は最初にコマンドを叩いたときに落ちてくる）
+    # DOTFILES_AQUA_LAZY=1 なら実体を落とさず PATH に載せるだけにする（初回実行が
+    # 速い。実体は最初にコマンドを叩いたときに落ちてくる）
     aqua_opts="-a"
-    [ -n "${DOTFILES_AQUA_ONLY_LINK:-}" ] && aqua_opts="-a -l"
+    [ -n "${DOTFILES_AQUA_LAZY:-}" ] && aqua_opts="-a -l"
 
     pkg_log "aqua: installing packages (${aqua_opts})"
     # shellcheck disable=SC2086
