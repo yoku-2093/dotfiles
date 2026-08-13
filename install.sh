@@ -17,7 +17,7 @@
 #
 # 各レイヤーのディレクトリは中身が両方とも任意。無いものは飛ばす。
 #
-#   <layer>/links/   ここに $HOME からの相対パスで置いたものが symlink される
+#   <layer>/home/    ここに $HOME からの相対パスで置いたものが symlink される
 #   <layer>/setup.sh install 時に実行される
 #
 # 何度実行してもよい。既存のファイルは上書きせず退避する。
@@ -169,8 +169,8 @@ done
 # --- symlink ------------------------------------------------------------------
 
 link_one() {
-    local links_dir="$1" rel="$2"
-    local src="${links_dir}/${rel}"
+    local home_dir="$1" rel="$2"
+    local src="${home_dir}/${rel}"
     local dest="${target_dir}/${rel}"
 
     if [ -L "${dest}" ]; then
@@ -207,11 +207,11 @@ link_one() {
 # ディレクトリ自体は symlink にせずファイル単位で張る。
 # そうしないと ~/.config のような共有ディレクトリを丸ごと奪ってしまう。
 link_layer() {
-    local links_dir="$1" path
-    [ -d "${links_dir}" ] || return 0
+    local home_dir="$1" path
+    [ -d "${home_dir}" ] || return 0
 
-    find "${links_dir}" \( -type f -o -type l \) -print | while IFS= read -r path; do
-        link_one "${links_dir}" "${path#"${links_dir}"/}"
+    find "${home_dir}" \( -type f -o -type l \) -print | while IFS= read -r path; do
+        link_one "${home_dir}" "${path#"${home_dir}"/}"
     done
 }
 
@@ -229,10 +229,10 @@ if [ -n "${list_only}" ]; then
             log "  ${layer}: (ディレクトリなし)"
             continue
         fi
-        count="$(find "${dir}/links" \( -type f -o -type l \) -print 2> /dev/null | wc -l | tr -d ' ')"
+        count="$(find "${dir}/home" \( -type f -o -type l \) -print 2> /dev/null | wc -l | tr -d ' ')"
         setup="-"
         [ -f "${dir}/setup.sh" ] && setup="setup.sh"
-        log "  ${layer}: links=${count} ${setup}"
+        log "  ${layer}: home=${count} ${setup}"
     done
     exit 0
 fi
@@ -244,7 +244,7 @@ for layer in ${layers}; do
     [ -d "${layer_dir}" ] || continue
 
     log "[${layer}]"
-    link_layer "${layer_dir}/links"
+    link_layer "${layer_dir}/home"
 
     if [ -f "${layer_dir}/setup.sh" ]; then
         if [ -n "${skip_setup}" ] || [ -n "${dry_run}" ]; then

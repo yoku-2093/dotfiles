@@ -41,7 +41,7 @@ Graviton も同じで、64bit Raspberry Pi OS は `/etc/os-release` に `ID=debi
 
 ```
 <layer>/
-├── links/      $HOME からの相対パスで置いたファイルが symlink される
+├── home/      $HOME からの相対パスで置いたファイルが symlink される
 └── setup.sh    install 時に実行される
 ```
 
@@ -49,10 +49,10 @@ Graviton も同じで、64bit Raspberry Pi OS は `/etc/os-release` に `ID=debi
 
 ```
 common/
-├── links/.tmux.conf     -> ~/.tmux.conf
+├── home/.tmux.conf     -> ~/.tmux.conf
 └── setup.sh             tpm (tmux plugin manager) を入れる
 macos/
-├── links/.zshrc         -> ~/.zshrc
+├── home/.zshrc         -> ~/.zshrc
 └── setup.sh
 linux/
 ├── setup.sh
@@ -61,12 +61,12 @@ linux/
 
 `.zshrc` は BSD 版の `ls` 前提の alias を含むため `macos/` に置いている。
 
-### links/
+### home/
 
 | 置く場所 | できる symlink |
 | --- | --- |
-| `common/links/.gitconfig` | `~/.gitconfig` |
-| `linux/links/.config/nvim/init.lua` | `~/.config/nvim/init.lua` |
+| `common/home/.gitconfig` | `~/.gitconfig` |
+| `linux/home/.config/nvim/init.lua` | `~/.config/nvim/init.lua` |
 
 途中のディレクトリは自動で作る。ディレクトリ自体は symlink にせずファイル単位で
 張るので、`~/.config` の他の中身には触らない。
@@ -114,5 +114,5 @@ linux/
 
 ## tmux
 
-`common/links/.tmux.conf` は [tpm](https://github.com/tmux-plugins/tpm) 前提。
+`common/home/.tmux.conf` は [tpm](https://github.com/tmux-plugins/tpm) 前提。
 `common/setup.sh` が clone するので、tmux 起動後に `prefix + I` を押せばよい。
