@@ -63,8 +63,6 @@ macos-local/
 raspberrypi/setup.sh
 ```
 
-`.zshrc` は BSD 版の `ls` 前提の alias を含むため `macos-local/` に置いている。
-
 ### home/
 
 | 置く場所 | できる symlink |
