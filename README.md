@@ -1,6 +1,6 @@
 # dotfiles
 
-環境に応じたレイヤーを重ねて適用する dotfiles。
+レイヤーを重ねて適用する dotfiles。
 
 ```sh
 git clone <this repo> ~/dotfiles
@@ -13,21 +13,27 @@ git clone <this repo> ~/dotfiles
 
 ## レイヤー
 
-実行環境から下記の順にレイヤーを決めて、汎用的なものから順に適用する。
+汎用的なものから順に適用し、後のレイヤーが前のレイヤーを上書きする。
 ディレクトリが無いレイヤーは飛ばすので、必要になったときに作ればよい。
 
-| レイヤー | 条件 |
+| レイヤー | 決まり方 |
 | --- | --- |
-| `common/` | 全環境 |
-| `macos/` `linux/` | OS |
-| `macos-arm64/` `linux-amd64/` `linux-arm64/` `linux-armhf/` | OS + アーキテクチャ |
-| `raspberrypi/` | Raspberry Pi（デバイスツリーのモデル名で判定） |
+| `common/` | 常に適用 |
+| `linux/` `macos/` | `uname -s` |
+| `linux/amd64/` `linux/arm64/` `macos/arm64/` | `uname -m` |
+| `linux/raspberrypi/` など | **`--layer` で明示指定したときだけ** |
 
-Raspberry Pi はアーキテクチャだけでは判別できない（Apple Silicon や Graviton も
-`arm64`）ため、`/proc/device-tree/model` を見て別レイヤーにしている。
-「arm64 の Linux 全般」に効かせたいものは `linux-arm64/` に置く。
+**自動で決まるのは `uname` から分かる OS とアーキテクチャだけ。** それ以外は自動判定
+しない。ラズパイのような「特定環境向けの追加分」は明示的に指定する:
 
-判定結果は `install.sh` の実行時に `layers:` として表示される。
+```sh
+./install.sh --layer linux/raspberrypi
+```
+
+（ラズパイはアーキテクチャでも OS でも判別できない。arm64 は Apple Silicon や
+Graviton も同じで、64bit Raspberry Pi OS は `/etc/os-release` に `ID=debian` を返す）
+
+用途別に分けたいときも同じ仕組みで足せる（`--layer work` など）。
 
 ## 各レイヤーの中身
 
@@ -48,7 +54,9 @@ common/
 macos/
 ├── links/.zshrc         -> ~/.zshrc
 └── setup.sh
-linux/setup.sh
+linux/
+├── setup.sh
+└── raspberrypi/setup.sh
 ```
 
 `.zshrc` は BSD 版の `ls` 前提の alias を含むため `macos/` に置いている。
@@ -63,32 +71,41 @@ linux/setup.sh
 途中のディレクトリは自動で作る。ディレクトリ自体は symlink にせずファイル単位で
 張るので、`~/.config` の他の中身には触らない。
 
-同じパスを複数のレイヤーが持つ場合は、後のレイヤー（より具体的な方）が勝つ。
+同じパスを複数のレイヤーが持つ場合は、後のレイヤーが勝つ。
 
 ### setup.sh
 
 `DOTFILES_TARGET` / `DOTFILES_OS` / `DOTFILES_ARCH` が渡される。
 失敗しても install 全体は止まらず、警告を出して次に進む。
 
-## 動作確認
+## オプション
 
-`$HOME` を汚さずに試せる。レイヤーの判定も上書きできる。
-
-```sh
-DOTFILES_TARGET=$(mktemp -d) DOTFILES_SKIP_SETUP=1 ./install.sh
-
-# ラズパイ想定で確認する
-DOTFILES_TARGET=$(mktemp -d) DOTFILES_LAYERS="common linux linux-arm64 raspberrypi" ./install.sh
+```
+--layer <name>      レイヤーを追加する（リポジトリ直下からの相対パス。複数回指定可）
+--layers "<a b c>"  自動判定を使わずレイヤーの並びを直接指定する
+--os <name>         OS の判定を上書きする (macos / linux)
+--arch <name>       アーキテクチャの判定を上書きする (amd64 / arm64 / armhf)
+--target <dir>      配置先を変える (default: $HOME)
+--backup-dir <dir>  退避先を変える (default: <target>/.dotfiles-backup)
+--skip-setup        setup.sh を実行せず symlink だけ張る
+--dry-run           何もせず、やることだけ表示する
+--list              適用されるレイヤーの状態を表示して終了する
+-h, --help          ヘルプ
 ```
 
-| 環境変数 | 既定値 | 用途 |
-| --- | --- | --- |
-| `DOTFILES_TARGET` | `$HOME` | 配置先 |
-| `DOTFILES_BACKUP_DIR` | `$DOTFILES_TARGET/.dotfiles-backup` | 退避先 |
-| `DOTFILES_OS` | `uname -s` から判定 | `macos` / `linux` |
-| `DOTFILES_ARCH` | `uname -m` から判定 | `amd64` / `arm64` / `armhf` |
-| `DOTFILES_LAYERS` | 判定結果 | レイヤーの並びを直接指定する |
-| `DOTFILES_SKIP_SETUP` | - | `1` なら symlink だけ張る |
+同じ設定は環境変数でも渡せる（オプションが優先）:
+`DOTFILES_TARGET` / `DOTFILES_BACKUP_DIR` / `DOTFILES_OS` / `DOTFILES_ARCH` /
+`DOTFILES_LAYERS` / `DOTFILES_SKIP_SETUP`
+
+### 動作確認
+
+`$HOME` を汚さずに試せる。
+
+```sh
+./install.sh --list                          # 何が適用されるか見る
+./install.sh --target "$(mktemp -d)" --dry-run
+./install.sh --target "$(mktemp -d)" --os macos --arch arm64 --skip-setup
+```
 
 ## 含めないもの
 
