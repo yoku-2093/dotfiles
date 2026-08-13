@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 環境ごとの dotfiles インストーラ。
 #
-#   ./install.sh --env <name>
+#   ./install.sh [--env <name>]
 #
 # 適用されるのは common と、指定した環境のディレクトリだけ。後のものが前のものを
 # 上書きする。
