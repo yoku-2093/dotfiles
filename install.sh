@@ -6,10 +6,10 @@
 # 適用されるのは common と、指定した環境のディレクトリだけ。後のものが前のものを
 # 上書きする。
 #
-#   common          全環境に共通
-#   <env>           ona / macos-local / raspberrypi
+#   common          全環境に共通（常に適用）
+#   <env>           ona / macos-local / raspberrypi（--env / DOTFILES_ENV で指定）
 #
-# OS もアーキテクチャも自動判定しない。環境は必ず --env で明示する。
+# OS もアーキテクチャも自動判定しない。環境を指定しなければ common だけを置く。
 # CLI ツールの OS / arch 差は aqua が吸収するので、レイヤーを分ける必要はない。
 #
 # 各環境のディレクトリは中身が両方とも任意。無いものは飛ばす。
@@ -36,9 +36,9 @@ available_envs() {
 
 usage() {
     cat <<'EOF'
-usage: install.sh --env <name> [options]
+usage: install.sh [--env <name>] [options]
 
-  --env <name>        環境を指定する (必須)
+  --env <name>        環境を指定する (省略すると common だけを置く)
   --target <dir>      配置先を変える (default: $HOME)
   --backup-dir <dir>  退避先を変える (default: <target>/.dotfiles-backup)
   --skip-setup        setup.sh を実行せず symlink だけ張る
@@ -52,7 +52,8 @@ usage: install.sh --env <name> [options]
 examples:
   ./install.sh --env ona
   ./install.sh --env macos-local
-  ./install.sh --env raspberrypi --list
+  DOTFILES_ENV=raspberrypi ./install.sh
+  ./install.sh                                 # common だけ
   ./install.sh --env ona --target "$(mktemp -d)" --dry-run
 EOF
     printf '\nenvs:\n'
@@ -116,20 +117,20 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 
+# 環境を指定しなければ common だけ。自動判定はしない。
 if [ -z "${env_name}" ]; then
-    usage >&2
-    die "--env が必要（自動判定はしない）"
+    layers="common"
+else
+    case "${env_name}" in
+        */* | .* | *..*) die "環境名が不正: ${env_name}" ;;
+    esac
+
+    if ! available_envs | grep -q "^${env_name}$"; then
+        die "そんな環境は無い: ${env_name}（$(available_envs | tr '\n' ' ')）"
+    fi
+
+    layers="common ${env_name}"
 fi
-
-case "${env_name}" in
-    */* | .* | *..*) die "環境名が不正: ${env_name}" ;;
-esac
-
-if ! available_envs | grep -q "^${env_name}$"; then
-    die "そんな環境は無い: ${env_name}（$(available_envs | tr '\n' ' ')）"
-fi
-
-layers="common ${env_name}"
 BACKUP_DIR="${backup_root:-${target_dir}/.dotfiles-backup}/$(date +%Y%m%d-%H%M%S)"
 
 # --- symlink ------------------------------------------------------------------
@@ -184,7 +185,7 @@ link_layer() {
 # --- main ---------------------------------------------------------------------
 
 log "target: ${target_dir}"
-log "env:    ${env_name}"
+log "env:    ${env_name:-(指定なし: common だけ)}"
 [ -n "${dry_run}" ] && log "(dry-run: 何も変更しない)"
 
 if [ -n "${list_only}" ]; then

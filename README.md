@@ -22,11 +22,14 @@ git clone <this repo> ~/dotfiles
 | `raspberrypi` | ラズパイ（64bit の Raspberry Pi OS） |
 
 **OS もアーキテクチャも自動判定しない。** ona とラズパイはどちらも Linux で
-`uname` では区別できないので、環境は必ず `--env` で明示する。
+`uname` では区別できないので、環境は明示する。`--env` でも環境変数でもよい。
 
 ```sh
 ./install.sh --env macos-local
+DOTFILES_ENV=macos-local ./install.sh   # 同じ（--env が優先）
 ```
+
+環境を指定しなければ `common` だけを置く。
 
 アーキテクチャ別のディレクトリは無い。CLI ツールの OS / arch 差は
 [aqua](https://aquaproj.github.io/) が吸収する。
@@ -138,7 +141,7 @@ root でなければ `sudo` を付け、どちらも使えなければ警告し�
 ## オプション
 
 ```
---env <name>        環境を指定する (必須)
+--env <name>        環境を指定する (省略すると common だけを置く)
 --target <dir>      配置先を変える (default: $HOME)
 --backup-dir <dir>  退避先を変える (default: <target>/.dotfiles-backup)
 --skip-setup        setup.sh を実行せず symlink だけ張る
