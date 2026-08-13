@@ -18,7 +18,6 @@
 #   <env>/setup.sh  install 時に実行される
 #
 # setup.sh には DOTFILES_DIR / DOTFILES_TARGET / DOTFILES_ENV が渡る。
-# OS のパッケージ導入は common/lib.sh の pkg_install を使う。
 #
 # 何度実行してもよい。既存のファイルは上書きせず退避する。
 # macOS / Linux のどちらでも動くよう GNU 拡張は使わない。

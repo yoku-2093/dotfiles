@@ -54,8 +54,7 @@ common/
 ├── home/.tmux.conf                            -> ~/.tmux.conf
 ├── home/.config/aquaproj-aqua/aqua.yaml       -> 入れる CLI ツール一覧
 ├── home/.config/dotfiles/shellenv.sh          -> PATH と aqua の設定
-├── lib.sh                                      setup.sh から使うヘルパー (pkg_install)
-└── setup.sh                                    tpm と aqua を入れる
+└── setup.sh                                    aqua を入れる
 ona/setup.sh
 macos-local/
 ├── home/.zshrc                                -> ~/.zshrc
@@ -104,37 +103,11 @@ aqua up                    # バージョンを上げる
 - `DOTFILES_AQUA_ONLY_LINK=1` を付けると実体を落とさず link だけ張る（初回が速い。
   実体は最初にコマンドを叩いたときに落ちてくる）
 
-### aqua に向かないもの
+### aqua で入らないもの
 
-| もの | どうするか |
-| --- | --- |
-| `tmux` などの OS 側のパッケージ | `<env>/setup.sh` で `pkg_install` |
-| リリースバイナリを出していないツール | 同上（例: `eza` は macOS 向けバイナリが無く、aqua だと cargo ビルドになる） |
-| 32bit のラズパイ (armv7l) | ほぼバイナリが無いので `pkg_install` で apt から |
-
-### pkg_install
-
-OS のパッケージを入れるヘルパー。`common/lib.sh` を source して使う。
-
-```bash
-. "${DOTFILES_DIR}/common/lib.sh"
-pkg_install tmux
-```
-
-| 検出 | 実行されるもの |
-| --- | --- |
-| `brew` | `brew install`（sudo なし） |
-| `apt-get` | `apt-get update` を1回 → `apt-get install -y --no-install-recommends` |
-| `dnf` | `dnf install -y` |
-| `pacman` | `pacman -S --needed --noconfirm` |
-| `apk` | `apk add --no-cache` |
-| `zypper` | `zypper install -y` |
-
-root でなければ `sudo` を付け、どちらも使えなければ警告して失敗する（`setup.sh` の
-失敗は install 全体を止めない）。`DOTFILES_PKG_DRY_RUN=1` で実行せずコマンドだけ表示できる。
-
-吸収できるのはコマンドの違いだけで、パッケージ名の違い（`fd-find` / `fd` など）は
-吸収できない。そういう CLI ツールは aqua 側に寄せる。
+リリースバイナリを出していないツールは aqua だとソースビルドにフォールバックする
+（`eza` は macOS 向けバイナリが無く cargo ビルドになる）。32bit のラズパイ
+(armv7l) もほぼバイナリが無い。そういうものは `<env>/setup.sh` に書く。
 
 ## オプション
 
@@ -165,8 +138,3 @@ root でなければ `sudo` を付け、どちらも使えなければ警告し�
 
 秘匿情報（トークン・鍵・暗号化ファイル）は置かない。
 特定のサービスやエディタ固有の設定処理も入れない。
-
-## tmux
-
-`common/home/.tmux.conf` は [tpm](https://github.com/tmux-plugins/tpm) 前提。
-`common/setup.sh` が clone するので、tmux 起動後に `prefix + I` を押せばよい。

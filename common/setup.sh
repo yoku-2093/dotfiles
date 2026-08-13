@@ -2,30 +2,15 @@
 # 全環境で実行される。install.sh から呼ばれる。
 #
 # 渡ってくる環境変数: DOTFILES_DIR / DOTFILES_TARGET / DOTFILES_ENV
+#
+# やることは aqua を入れて home/.config/aquaproj-aqua/aqua.yaml のツールを
+# 入れるだけ。個別のツールをここで特別扱いしない。
 set -eu
 
-# shellcheck source=common/lib.sh
-. "${DOTFILES_DIR}/common/lib.sh"
+log() { printf '         %s\n' "$*"; }
 
 TARGET="${DOTFILES_TARGET:-${HOME}}"
 
-# --- tmux のプラグインマネージャ（home/.tmux.conf が前提にしている） ----------
-
-TPM_DIR="${TARGET}/.tmux/plugins/tpm"
-if [ -d "${TPM_DIR}" ]; then
-    pkg_log "tpm: already installed"
-elif ! command -v git > /dev/null 2>&1; then
-    pkg_log "tpm: git が無いので飛ばす"
-else
-    pkg_log "tpm: installing"
-    git clone --quiet --depth 1 https://github.com/tmux-plugins/tpm "${TPM_DIR}"
-fi
-
-# --- aqua（CLI ツールの実体はこれが入れる） -----------------------------------
-#
-# OS / アーキテクチャごとに適切なバイナリを取ってくるので、環境別に分ける必要が
-# ないものは home/.config/aquaproj-aqua/aqua.yaml に足すだけでよい。
-#
 # 更新するときは https://github.com/aquaproj/aqua-installer/releases を見て
 # バージョンと sha256 を両方直す。
 AQUA_INSTALLER_VERSION=v4.0.5
@@ -51,32 +36,31 @@ install_aqua() {
     tmp="$(mktemp -d)"
     installer="${tmp}/aqua-installer"
 
-    pkg_log "aqua: installing ${AQUA_VERSION}"
+    log "aqua: installing ${AQUA_VERSION}"
     curl -sSfL --retry 3 -o "${installer}" \
         "https://raw.githubusercontent.com/aquaproj/aqua-installer/${AQUA_INSTALLER_VERSION}/aqua-installer"
 
     if ! got="$(sha256_of "${installer}")"; then
-        pkg_log "aqua: sha256sum も shasum も無いので検証できない。中止する"
+        log "aqua: sha256sum も shasum も無いので検証できない。中止する"
         rm -rf "${tmp}"
         return 1
     fi
     if [ "${got}" != "${AQUA_INSTALLER_SHA256}" ]; then
-        pkg_log "aqua: aqua-installer の checksum 不一致。中止する"
-        pkg_log "  expected ${AQUA_INSTALLER_SHA256}"
-        pkg_log "  actual   ${got}"
+        log "aqua: aqua-installer の checksum 不一致。中止する"
+        log "  expected ${AQUA_INSTALLER_SHA256}"
+        log "  actual   ${got}"
         rm -rf "${tmp}"
         return 1
     fi
 
-    # installer は AQUA_ROOT_DIR/bin に入れる
     AQUA_ROOT_DIR="${AQUA_ROOT_DIR}" bash "${installer}" -v "${AQUA_VERSION}" > /dev/null
     rm -rf "${tmp}"
 }
 
 if ! command -v curl > /dev/null 2>&1; then
-    pkg_log "aqua: curl が無いので飛ばす"
+    log "aqua: curl が無いので飛ばす"
 elif [ -x "${AQUA_BIN}" ]; then
-    pkg_log "aqua: already installed ($("${AQUA_BIN}" -v))"
+    log "aqua: already installed ($("${AQUA_BIN}" -v))"
 else
     install_aqua
 fi
@@ -88,7 +72,7 @@ if [ -x "${AQUA_BIN}" ] && [ -f "${AQUA_CONFIG}" ]; then
     aqua_opts="-a"
     [ -n "${DOTFILES_AQUA_ONLY_LINK:-}" ] && aqua_opts="-a -l"
 
-    pkg_log "aqua: installing packages (${aqua_opts})"
+    log "aqua: installing packages (${aqua_opts})"
     # shellcheck disable=SC2086
     AQUA_ROOT_DIR="${AQUA_ROOT_DIR}" AQUA_GLOBAL_CONFIG="${AQUA_CONFIG}" \
         "${AQUA_BIN}" install ${aqua_opts}
@@ -97,5 +81,5 @@ fi
 # aqua の bin を PATH に載せるのは shellenv.sh の役目。rc から読んでいなければ促す。
 case ":${PATH}:" in
     *":${AQUA_ROOT_DIR}/bin:"*) ;;
-    *) pkg_log "PATH 未設定: rc に '. ${TARGET}/.config/dotfiles/shellenv.sh' を足す" ;;
+    *) log "PATH 未設定: rc に '. ${TARGET}/.config/dotfiles/shellenv.sh' を足す" ;;
 esac

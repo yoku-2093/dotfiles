@@ -19,6 +19,7 @@ packages:
   - name: jqlang/jq@jq-1.8.2
   - name: junegunn/fzf@v0.74.2
   - name: cli/cli@v2.97.0
+  - name: tmux/tmux-builds@v3.7b
   # 入れるだけでは効かない（シェルや git 側の設定が必要）ので保留。
   # 使うと決めたらコメントを外して設定も入れる。
   #   - name: dandavison/delta@0.19.2      .gitconfig の core.pager / interactive.diffFilter
