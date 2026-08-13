@@ -6,9 +6,8 @@
 #
 # パッケージマネージャの違い（コマンドとオプション）だけを吸収する。
 # パッケージ「名」がディストロ間で違うもの（fd-find / fd、bat / batcat など）は
-# 吸収できないので、その分はディストロ別のレイヤーに分ける:
-#
-#   ./install.sh --layer linux/debian
+# 吸収できないので、そういう CLI ツールは aqua 側（common/home の aqua.yaml）で
+# 入れる。ここで扱うのは aqua に無い OS 側のものだけ。
 #
 # 環境変数:
 #   DOTFILES_PKG_DRY_RUN  1 なら実行せずコマンドを表示する

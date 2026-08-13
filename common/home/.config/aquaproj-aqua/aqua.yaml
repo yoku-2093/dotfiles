@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/aquaproj/aqua/main/json-schema/aqua-yaml.json
+# aqua - Declarative CLI Version Manager
+# https://aquaproj.github.io/
+#
+# 全環境で入れる CLI ツール。OS とアーキテクチャの差は aqua が吸収するので、
+# ここに1行足せば mac / ona / ラズパイ（64bit）すべてに入る。
+#
+#   aqua g -i <owner>/<repo>   ここに最新版を追記する
+#   aqua up                    バージョンを上げる
+#   aqua i -a                  入れ直す（install.sh がやる）
+registries:
+  - type: standard
+    ref: v4.551.0 # renovate: depName=aquaproj/aqua-registry
+packages:
+  - name: BurntSushi/ripgrep@15.2.0
+  - name: sharkdp/fd@v10.4.2
+  - name: sharkdp/bat@v0.26.1
+  - name: jqlang/jq@jq-1.8.2
+  - name: junegunn/fzf@v0.74.2
+  - name: cli/cli@v2.97.0
+  # 入れるだけでは効かない（シェルや git 側の設定が必要）ので保留。
+  # 使うと決めたらコメントを外して設定も入れる。
+  #   - name: dandavison/delta@0.19.2      .gitconfig の core.pager / interactive.diffFilter
+  #   - name: ajeetdsouza/zoxide@v0.10.0   eval "$(zoxide init zsh)"
+  #   - name: starship/starship@v1.26.0    eval "$(starship init zsh)"
+  #
+  # eza は macOS 向けのリリースバイナリが無く、darwin では cargo ビルドに
+  # フォールバックする（Rust ツールチェーンが必要）。ここには入れない。
+  #   - name: eza-community/eza@v0.23.5

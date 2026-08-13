@@ -4,6 +4,9 @@
 
 export TERM=xterm-256color
 
+# dotfiles: PATH と aqua の設定
+[ -f "$HOME/.config/dotfiles/shellenv.sh" ] && . "$HOME/.config/dotfiles/shellenv.sh"
+
 # HISTORY
 HISTFILE=~/.zsh_history
 HISTSIZE=1000000
