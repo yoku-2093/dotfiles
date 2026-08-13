@@ -50,6 +50,7 @@ Graviton も同じで、64bit Raspberry Pi OS は `/etc/os-release` に `ID=debi
 ```
 common/
 ├── home/.tmux.conf     -> ~/.tmux.conf
+├── lib.sh               setup.sh から使うヘルパー (pkg_install)
 └── setup.sh             tpm (tmux plugin manager) を入れる
 macos/
 ├── home/.zshrc         -> ~/.zshrc
@@ -75,8 +76,34 @@ linux/
 
 ### setup.sh
 
-`DOTFILES_TARGET` / `DOTFILES_OS` / `DOTFILES_ARCH` が渡される。
+`DOTFILES_DIR` / `DOTFILES_TARGET` / `DOTFILES_OS` / `DOTFILES_ARCH` が渡される。
 失敗しても install 全体は止まらず、警告を出して次に進む。
+
+パッケージの導入は `common/lib.sh` の `pkg_install` を使う:
+
+```bash
+. "${DOTFILES_DIR}/common/lib.sh"
+pkg_install tmux ripgrep
+```
+
+| 検出 | 実行されるもの |
+| --- | --- |
+| `brew` | `brew install`（sudo なし） |
+| `apt-get` | `apt-get update` を1回 → `apt-get install -y --no-install-recommends` |
+| `dnf` | `dnf install -y` |
+| `pacman` | `pacman -S --needed --noconfirm` |
+| `apk` | `apk add --no-cache` |
+| `zypper` | `zypper install -y` |
+
+root でなければ `sudo` を付け、どちらも使えなければ警告して失敗する（`setup.sh` の
+失敗は install 全体を止めない）。`DOTFILES_PKG_DRY_RUN=1` で実行せずコマンドだけ表示できる。
+
+**吸収できるのはコマンドの違いだけ。** パッケージ名がディストロ間で違うもの
+（`fd-find` / `fd`、`bat` / `batcat` など）は、その分だけディストロ別レイヤーに分ける:
+
+```sh
+./install.sh --layer linux/debian
+```
 
 ## オプション
 

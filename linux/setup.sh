@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # Linux でのみ実行される。install.sh から呼ばれる。
 #
-# 使える環境変数: DOTFILES_TARGET / DOTFILES_OS / DOTFILES_ARCH
-#
-# ディストリ差やコンテナ差はここで見る。パッケージの導入など sudo が要る処理は
-# 非対話で失敗し得るので、失敗しても install 全体を止めないようにする。
+# 渡ってくる環境変数: DOTFILES_DIR / DOTFILES_TARGET / DOTFILES_OS / DOTFILES_ARCH
 set -eu
 
-log() { printf '         %s\n' "$*"; }
+# shellcheck source=common/lib.sh
+. "${DOTFILES_DIR}/common/lib.sh"
 
-# 例:
-#   command -v apt-get > /dev/null 2>&1 && sudo apt-get install -y tmux || log "skip"
+# パッケージマネージャ (apt-get / dnf / pacman / apk / zypper) の違いは
+# pkg_install が吸収する。パッケージ名自体が違うものはディストロ別レイヤーへ:
+#   ./install.sh --layer linux/debian
+#
+#   pkg_install tmux ripgrep
 
-log "nothing to do"
+pkg_log "nothing to do"

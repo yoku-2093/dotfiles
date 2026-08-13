@@ -3,9 +3,10 @@
 #
 #   ./install.sh --layer linux/raspberrypi
 #
-# 使える環境変数: DOTFILES_TARGET / DOTFILES_OS / DOTFILES_ARCH
+# 渡ってくる環境変数: DOTFILES_DIR / DOTFILES_TARGET / DOTFILES_OS / DOTFILES_ARCH
 set -eu
 
-log() { printf '         %s\n' "$*"; }
+# shellcheck source=common/lib.sh
+. "${DOTFILES_DIR}/common/lib.sh"
 
-log "nothing to do"
+pkg_log "nothing to do"

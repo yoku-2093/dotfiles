@@ -20,6 +20,9 @@
 #   <layer>/home/    ここに $HOME からの相対パスで置いたものが symlink される
 #   <layer>/setup.sh install 時に実行される
 #
+# setup.sh には DOTFILES_DIR / DOTFILES_TARGET / DOTFILES_OS / DOTFILES_ARCH が渡る。
+# パッケージ導入は common/lib.sh の pkg_install を使う。
+#
 # 何度実行してもよい。既存のファイルは上書きせず退避する。
 # macOS / Linux のどちらでも動くよう GNU 拡張は使わない。
 set -eu
@@ -237,7 +240,7 @@ if [ -n "${list_only}" ]; then
     exit 0
 fi
 
-export DOTFILES_TARGET="${target_dir}" DOTFILES_OS="${OS}" DOTFILES_ARCH="${ARCH}"
+export DOTFILES_DIR DOTFILES_TARGET="${target_dir}" DOTFILES_OS="${OS}" DOTFILES_ARCH="${ARCH}"
 
 for layer in ${layers}; do
     layer_dir="${DOTFILES_DIR}/${layer}"
