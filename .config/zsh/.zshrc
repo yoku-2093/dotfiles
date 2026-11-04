@@ -49,3 +49,7 @@ PROMPT='
 # Enable shell integration
 [[ "$TERM_PROGRAM" == "vscode" ]] && . "$(code --locate-shell-integration-path zsh)"
 
+# コマンドが実行されたらすぐに履歴ファイルに書き込む
+setopt share_history
+# 複数のタブから同時に履歴ファイルに追記する
+setopt append_history
