@@ -1,11 +1,6 @@
-# Amazon Q pre block. Keep at the top of this file.
-[[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.pre.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.pre.zsh"
 # .zshrc file
 
 export TERM=xterm-256color
-
-# dotfiles: PATH と aqua の設定
-[ -f "$HOME/.config/dotfiles/shellenv.sh" ] && . "$HOME/.config/dotfiles/shellenv.sh"
 
 # HISTORY
 HISTFILE=~/.zsh_history
@@ -53,5 +48,4 @@ PROMPT='
 
 # Enable shell integration
 [[ "$TERM_PROGRAM" == "vscode" ]] && . "$(code --locate-shell-integration-path zsh)"
-
 
