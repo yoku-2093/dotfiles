@@ -1,0 +1,21 @@
+name: Shell syntax
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check shell syntax
+        shell: bash
+        run: |
+          while IFS= read -r -d '' file; do
+            echo "Checking $file"
+            bash -n "$file"
+          done < <(find scripts -type f -name '*.sh' -print0)
