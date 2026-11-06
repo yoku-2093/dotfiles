@@ -60,6 +60,8 @@ setup_playwright() {
         mkdir -p "$(dirname "$config")" || return 1
         printf '\n[mcp_servers.playwright]\ncommand = "npx"\nargs = ["@playwright/mcp@latest"]\n' >>"$config" || return 1
         step_record codex.playwright || return 1
+    else
+        return 0
     fi
 
     if step_done chromium.install; then
