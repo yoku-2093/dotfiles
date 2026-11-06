@@ -10,3 +10,12 @@ step_done() {
 step_record() {
     step_done "$1" || printf '%s\n' "$1" >> "$setup_history_file"
 }
+
+step_confirm() {
+    local step="$1" prompt="$2"
+    shift 2
+    if step_done "$step"; then
+        echo "このステップは過去に完了しています。"
+    fi
+    confirm "$prompt" "$@"
+}
