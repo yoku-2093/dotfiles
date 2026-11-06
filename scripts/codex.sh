@@ -15,12 +15,6 @@ mcp_configured() {
     [[ -f $config ]] && grep -Eq "^[[:space:]]*\\[[[:space:]]*[\"']?mcp_servers[\"']?[[:space:]]*\\.[[:space:]]*[\"']?$1[\"']?[[:space:]]*\\]" "$config"
 }
 
-if ! command -v npx >/dev/null 2>&1; then
-    confirm "Node.js をインストールしますか？" --exit-on-cancel
-    ensure_npx || exit 1
-fi
-step_record node.npx || exit 1
-
 if step_done codex.install; then
     echo "Codex のインストールは完了済みです。"
 elif command -v codex >/dev/null 2>&1; then
@@ -63,6 +57,12 @@ if step_done codex.linear && ! step_done codex.linear_login; then
         step_record codex.linear_login || exit 1
     fi
 fi
+
+if ! command -v npx >/dev/null 2>&1; then
+    confirm "Node.js をインストールしますか？" --exit-on-cancel
+    ensure_npx || exit 1
+fi
+step_record node.npx || exit 1
 
 setup_playwright() {
     if ! step_done codex.playwright && ! mcp_configured playwright; then
