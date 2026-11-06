@@ -1,10 +1,7 @@
 #!/bin/bash
 
-ensure_npx() {
+install_node() {
     local nvm_dir installer
-    if command -v npx >/dev/null 2>&1; then
-        return 0
-    fi
     nvm_dir="${NVM_DIR:-$HOME/.nvm}"
     if [[ ! -s "$nvm_dir/nvm.sh" ]]; then
         echo "npx がないため、nvm をインストールします。"
@@ -20,10 +17,17 @@ ensure_npx() {
     fi
     export NVM_DIR="$nvm_dir"
     if ! source "$nvm_dir/nvm.sh" ||
-        { ! command -v npx >/dev/null 2>&1 && ! nvm install --lts; } ||
+        ! nvm install --lts ||
         ! command -v npx >/dev/null 2>&1; then
         echo "npx を利用できません。Node.js のインストールと PATH を確認してください。" >&2
         return 1
     fi
 }
 
+
+load_nvm_if_needed() {
+    if ! command -v npx >/dev/null 2>&1 && [[ -s ${NVM_DIR:-$HOME/.nvm}/nvm.sh ]]; then
+        export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+        source "$NVM_DIR/nvm.sh"
+    fi
+}
