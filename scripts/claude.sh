@@ -2,7 +2,7 @@
 
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$script_dir/lib/confirm.sh"
-source "$script_dir/lib/chromium.sh"
+source "$script_dir/lib/chrome.sh"
 source "$script_dir/lib/history.sh"
 source "$script_dir/lib/node.sh"
 set -o pipefail
@@ -39,12 +39,12 @@ fi
 load_nvm_if_needed
 
 if step_confirm claude.playwright "Claude に Playwright MCP を追加しますか？"; then
-    claude mcp add --scope user playwright -- npx @playwright/mcp@latest || exit 1
+    claude mcp add --scope user playwright -- npx @playwright/mcp@latest --browser chrome || exit 1
     step_record claude.playwright || exit 1
 fi
 if step_done claude.playwright; then
-    if step_confirm chromium.install "Chromium をインストールしますか？"; then
-        install_chromium || exit 1
-        step_record chromium.install || exit 1
+    if step_confirm chrome.install "Google Chrome をインストールしますか？"; then
+        install_chrome || exit 1
+        step_record chrome.install || exit 1
     fi
 fi

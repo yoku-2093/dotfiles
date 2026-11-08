@@ -18,7 +18,7 @@ install_node() {
     export NVM_DIR="$nvm_dir"
     if ! source "$nvm_dir/nvm.sh" ||
         ! nvm install --lts ||
-        ! command -v npx >/dev/null 2>&1; then
+        ! npx --version >/dev/null 2>&1; then
         echo "npx を利用できません。Node.js のインストールと PATH を確認してください。" >&2
         return 1
     fi
@@ -26,7 +26,7 @@ install_node() {
 
 
 load_nvm_if_needed() {
-    if ! command -v npx >/dev/null 2>&1 && [[ -s ${NVM_DIR:-$HOME/.nvm}/nvm.sh ]]; then
+    if ! npx --version >/dev/null 2>&1 && [[ -s ${NVM_DIR:-$HOME/.nvm}/nvm.sh ]]; then
         export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
         source "$NVM_DIR/nvm.sh"
     fi
