@@ -10,6 +10,7 @@ set -o pipefail
 if step_confirm claude.install "Claude をインストールしますか？"; then
     curl -fsSL https://claude.ai/install.sh | bash || exit 1
     claude --version || exit 1
+    claude auth login || exit 1
     step_record claude.install || exit 1
 fi
 
