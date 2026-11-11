@@ -12,7 +12,7 @@ agents_source="$script_dir/../AGENTS.md"
 agents_target="$HOME/.codex/AGENTS.md"
 
 if step_confirm codex.install "Codex をインストールしますか？"; then
-    if ! curl -fsSL https://chatgpt.com/codex/install.sh | sh; then
+    if ! curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_NON_INTERACTIVE=1 sh; then
         echo "Codex のインストールに失敗しました。" >&2
         exit 1
     fi
